@@ -1,7 +1,8 @@
 import requests
 import sys
+import urllib.parse
 
-# Your Epic app credentials (Public Client: no client_secret)
+# Your Epic app credentials
 client_id = "04839623-912f-4e1a-9bfd-a09f529314a0"
 redirect_uri = "https://flask-oauth-app-1.onrender.com/callback"
 token_url = "https://fhir.epic.com/interconnect-fhir-oauth/oauth2/token"
@@ -11,17 +12,23 @@ try:
     with open("auth_code.txt", "r") as file:
         authorization_code = file.read().strip()
 except FileNotFoundError:
-    print("\n❌ Error: Could not find `auth_code.txt`. Please create the file and paste the authorization code inside.")
+    print("\n❌ Error: Could not find `auth_code.txt`. Ensure you paste the full code.")
     sys.exit(1)
 
-print(f"\n🔍 Using Authorization Code (truncated): {authorization_code[:50]}...")
+# Debugging: Print authorization code before sending request
+print(f"\n🔍 Authorization Code Length: {len(authorization_code)} characters")
+print(f"🔍 First 50 chars: {authorization_code[:50]}...")
+print(f"🔍 Last 50 chars: {authorization_code[-50:]}...")
 
-# Correct OAuth Token Request Data (no client secret)
+# Ensure the code is NOT encoded
+authorization_code = urllib.parse.unquote(authorization_code)
+
+# Construct the request payload
 data = {
     "grant_type": "authorization_code",
     "code": authorization_code,
     "redirect_uri": redirect_uri,
-    "client_id": client_id  # Only client_id, no client_secret
+    "client_id": client_id
 }
 
 headers = {
@@ -29,15 +36,14 @@ headers = {
 }
 
 print("\n🚀 Sending request to Epic for Access Token (Public Client)...")
+print(f"🔹 Token URL: {token_url}")
+print(f"🔹 Redirect URI: {redirect_uri}")
+print(f"🔹 Sending Authorization Code: {authorization_code}")
 
-# Send POST request
-try:
-    response = requests.post(token_url, headers=headers, data=data, timeout=10)  # ✅ No need for urlencode()
-except requests.exceptions.RequestException as e:
-    print(f"\n❌ Request failed: {e}")
-    sys.exit(1)
+# Send the token request
+response = requests.post(token_url, headers=headers, data=data)
 
-# Output response
+# Print the response
 print(f"\n📩 Epic Response Status Code: {response.status_code}")
 print(f"📜 Epic Response Text: {response.text}")
 
