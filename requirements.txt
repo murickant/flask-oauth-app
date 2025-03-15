@@ -1,5 +1,3 @@
-aext_assistant @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_56voisekis/croot/aext-assistant_1698112933404/work
-aext_assistant_server @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_75w3qn4jh1/croot/aext-assistant-server_1698104616471/work/backend_lib/assistant
 aext_core @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_2dd2iam3y3/croot/aext-core_1698107551163/work
 aext_core_server @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_0b3a294u9f/croot/aext-core-server_1698098094197/work/backend_lib/core
 aext_shared @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_3am9k_5uzd/croot/aext-shared_1698068320120/work/backend_lib/shared
