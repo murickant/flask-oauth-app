@@ -9,7 +9,12 @@ CLIENT_ID = "04839623-912f-4e1a-9bfd-a09f529314a0"
 TOKEN_URL = "https://fhir.epic.com/interconnect-fhir-oauth/oauth2/token"
 REDIRECT_URI = "https://flask-oauth-app-1.onrender.com/callback"
 
-@app.route('/callback')
+@app.route("/")
+def home():
+    """Home route to verify server is running."""
+    return "✅ Flask server is running on Render!", 200
+
+@app.route("/callback")
 def callback():
     """Handles Epic's OAuth redirect, extracts authorization code, and requests access token."""
     auth_code = request.args.get('code')
@@ -18,6 +23,10 @@ def callback():
         return "❌ No authorization code received!", 400
 
     print(f"✅ Authorization Code Received: {auth_code}")
+
+    # 🔹 List all files in directory before saving token
+    print(f"📂 Current directory: {os.getcwd()}")
+    print(f"📁 Files before saving token: {os.listdir(os.getcwd())}")
 
     # 🔹 Exchange Authorization Code for Access Token
     data = {
@@ -42,6 +51,10 @@ def callback():
             with open(save_path, "w") as f:
                 f.write(access_token)
             print(f"✅ Token successfully saved to: {save_path}")
+
+            # 🔹 List files after saving token to confirm it was written
+            print(f"📁 Files after saving token: {os.listdir(os.getcwd())}")
+
         except Exception as e:
             print(f"❌ Failed to save token.txt: {e}")
 
@@ -51,4 +64,5 @@ def callback():
         return "❌ Token Exchange Failed!", 400
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)  # Render handles deployment
+    port = int(os.environ.get("PORT", 5000))  # Render assigns a dynamic port
+    app.run(host="0.0.0.0", port=port)
