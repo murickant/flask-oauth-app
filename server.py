@@ -1,12 +1,46 @@
 import json
+import psycopg2
 from flask import Flask, request
 
 app = Flask(__name__)
 
+# 🔹 PostgreSQL Connection Details
+DB_CONFIG = {
+    "dbname": "epic_mvp",
+    "user": "thomas.murickan",  # Replace with your actual PostgreSQL user
+    "password": "1234",  # Replace with your actual password
+    "host": "localhost",
+    "port": "5432"
+}
+
+def save_token_to_db(access_token):
+    """Saves the access token to PostgreSQL instead of token.txt."""
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+
+        # Create table if it doesn't exist
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS access_tokens (
+                id SERIAL PRIMARY KEY,
+                token TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """)
+
+        # Insert token
+        cursor.execute("INSERT INTO access_tokens (token) VALUES (%s);", (access_token,))
+        conn.commit()
+        conn.close()
+
+        print("✅ Access Token Saved to Database!")
+    except Exception as e:
+        print(f"❌ Failed to save token to database: {e}")
+
 @app.route('/callback')
 def callback():
-    """Handles Epic OAuth callback, extracts authorization code, and exchanges for access token."""
-    print(f"🔍 Full request args: {request.args}")  # ✅ Debugging line
+    """Handles Epic OAuth callback and saves token to PostgreSQL."""
+    print(f"🔍 Full request args: {request.args}")
 
     auth_code = request.args.get('code')
     if not auth_code:
@@ -21,16 +55,10 @@ def callback():
         print("❌ Failed to obtain access token!")
         return "❌ Failed to obtain access token!", 400
 
-    print(f"🔑 Access Token Received: {access_token}")  # ✅ Debugging line
+    print(f"🔑 Access Token Received: {access_token}")
 
-    # ✅ Save access token to file
-    try:
-        with open("token.txt", "w") as file:
-            json.dump({"access_token": access_token}, file)
-        print("✅ Access Token Saved to token.txt!")
-    except Exception as e:
-        print(f"❌ Failed to save token: {e}")
-        return "❌ Error saving access token!", 500
+    # ✅ Save access token to PostgreSQL
+    save_token_to_db(access_token)
 
     return "✅ Access Token Obtained Successfully! You can close this window."
 
@@ -51,7 +79,6 @@ def exchange_for_access_token(auth_code):
 
     response = requests.post(TOKEN_URL, data=data)
     
-    # ✅ Log the full response from Epic
     try:
         response_json = response.json()
     except json.JSONDecodeError:

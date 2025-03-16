@@ -1,52 +1,35 @@
-import requests
+import psycopg2
 
-# 🔹 Set your Flask server URL on Render
-FLASK_SERVER_URL = "https://flask-oauth-app-1.onrender.com"
+DB_CONFIG = {
+    "dbname": "epic_mvp",
+    "user": "thomas.murickan",  # Replace with your actual PostgreSQL user
+    "password": "1234",  # Replace with your actual password
+    "host": "localhost",
+    "port": "5432"
+}
 
-# 🔹 Fetch token from Flask server
 def get_access_token():
-    """Fetch the access token from the Flask server."""
+    """Fetches the latest access token from PostgreSQL."""
     try:
-        response = requests.get(f"{FLASK_SERVER_URL}/get_token")
+        conn = psycopg2.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        
+        # Retrieve the most recent token
+        cursor.execute("SELECT token FROM access_tokens ORDER BY created_at DESC LIMIT 1;")
+        token = cursor.fetchone()
+        conn.close()
 
-        if response.status_code == 200:
-            access_token = response.json().get("access_token")
-            if access_token:
-                print(f"✅ Access Token Retrieved: {access_token}")
-                return access_token
-            else:
-                print("❌ No access token found in response.")
+        if token:
+            print(f"🔑 Retrieved Access Token: {token[0]}")
+            return token[0]
         else:
-            print(f"❌ Failed to retrieve token. Server Response: {response.text}")
+            print("❌ No access token found in the database.")
+            return None
+
     except Exception as e:
-        print(f"🚨 Error: {e}")
+        print(f"❌ Database error: {e}")
+        return None
 
-    return None
-
-# 🔹 Test API Call Using the Token
-def test_api_call():
-    access_token = get_access_token()
-    if not access_token:
-        print("❌ No access token available. Exiting.")
-        return
-
-    # 🔹 Epic FHIR API Endpoint
-    FHIR_API_URL = "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4/Patient"
-
-    # 🔹 Set Headers with Bearer Token
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Accept": "application/fhir+json"
-    }
-
-    # 🔹 Make API Request
-    response = requests.get(FHIR_API_URL, headers=headers)
-
-    if response.status_code == 200:
-        print("✅ API Request Successful:", response.json())
-    else:
-        print(f"❌ API Request Failed! Status Code: {response.status_code}")
-        print(response.json())
-
+# Test if token retrieval works
 if __name__ == "__main__":
-    test_api_call()
+    get_access_token()
