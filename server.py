@@ -24,7 +24,6 @@ def callback():
     print(f"🔍 Full Request URL: {request.url}", file=sys.stdout)
     print(f"🔍 Full Request Params: {request.args}", file=sys.stdout)
 
-    # Extract the authorization code from the URL
     auth_code = request.args.get('code')
     if not auth_code:
         print("❌ No authorization code received!", file=sys.stdout)
@@ -32,7 +31,6 @@ def callback():
 
     print(f"✅ Authorization Code Received: {auth_code}", file=sys.stdout)
 
-    # 🔹 Exchange Authorization Code for Access Token
     try:
         data = {
             "grant_type": "authorization_code",
@@ -51,7 +49,7 @@ def callback():
             access_token = response.json().get("access_token")
             print(f"✅ Access Token Obtained: {access_token}", file=sys.stdout)
 
-            # Save token to a file in Render (or a database in production)
+            # Save token to a file in Render
             save_path = os.path.join(os.getcwd(), "token.txt")
             try:
                 with open(save_path, "w") as f:
@@ -68,6 +66,20 @@ def callback():
     except Exception as e:
         print(f"🚨 ERROR: {e}", file=sys.stdout)
         return jsonify({"error": "Internal Server Error"}), 500
+
+@app.route("/get_token", methods=["GET"])
+def get_token():
+    """Serve the stored access token."""
+    save_path = os.path.join(os.getcwd(), "token.txt")
+    
+    if os.path.exists(save_path):
+        with open(save_path, "r") as f:
+            access_token = f.read().strip()
+        print(f"✅ Token retrieved from server: {access_token[:30]}... (truncated)", file=sys.stdout)
+        return jsonify({"access_token": access_token}), 200
+    else:
+        print("❌ No token file found on server.", file=sys.stdout)
+        return jsonify({"error": "No token available"}), 404
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Render assigns a dynamic port
