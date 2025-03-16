@@ -1,12 +1,9 @@
 import requests
 import os
-import sys  # Ensure logs are written to stdout
-from flask import Flask, request
+import sys
+from flask import Flask, request, jsonify
 
 app = Flask(__name__)
-
-# 🔹 Force all logs to be printed in Render
-print("🚀 Flask Server Starting...", file=sys.stdout)
 
 # 🔹 Epic OAuth Details
 CLIENT_ID = "04839623-912f-4e1a-9bfd-a09f529314a0"
@@ -19,26 +16,58 @@ def home():
     print("✅ Flask server home route accessed.", file=sys.stdout)
     return "✅ Flask server is running on Render!", 200
 
-@app.route("/callback")
+@app.route("/callback", methods=["GET"])
 def callback():
-    """Handles Epic's OAuth redirect, extracts authorization code, and requests access token."""
-    
-    print("🔹 Callback route accessed.", file=sys.stdout)
+    """Handles Epic's OAuth redirect, extracts authorization code, and exchanges it for an access token."""
 
-    # Print full request URL for debugging
-    full_request_url = request.url
-    print(f"🔍 Full Request URL: {full_request_url}", file=sys.stdout)
+    print("🔹 Callback route accessed.", file=sys.stdout)
+    print(f"🔍 Full Request URL: {request.url}", file=sys.stdout)
+    print(f"🔍 Full Request Params: {request.args}", file=sys.stdout)
 
     # Extract the authorization code from the URL
     auth_code = request.args.get('code')
-
     if not auth_code:
         print("❌ No authorization code received!", file=sys.stdout)
         return "❌ No authorization code received!", 400
 
     print(f"✅ Authorization Code Received: {auth_code}", file=sys.stdout)
 
-    return "✅ Authorization Code Captured! Check Render logs.", 200
+    # 🔹 Exchange Authorization Code for Access Token
+    try:
+        data = {
+            "grant_type": "authorization_code",
+            "code": auth_code,
+            "redirect_uri": REDIRECT_URI,
+            "client_id": CLIENT_ID
+        }
+
+        print("🔹 Sending request to Epic for token exchange...", file=sys.stdout)
+        response = requests.post(TOKEN_URL, data=data)
+
+        print(f"📩 Epic Response Status Code: {response.status_code}", file=sys.stdout)
+        print(f"📜 Epic Response: {response.text}", file=sys.stdout)
+
+        if response.status_code == 200:
+            access_token = response.json().get("access_token")
+            print(f"✅ Access Token Obtained: {access_token}", file=sys.stdout)
+
+            # Save token to a file in Render (or a database in production)
+            save_path = os.path.join(os.getcwd(), "token.txt")
+            try:
+                with open(save_path, "w") as f:
+                    f.write(access_token)
+                print(f"✅ Token successfully saved to: {save_path}", file=sys.stdout)
+            except Exception as e:
+                print(f"❌ Failed to save token.txt: {e}", file=sys.stdout)
+
+            return jsonify({"message": "✅ Access Token Obtained!", "access_token": access_token}), 200
+        else:
+            print(f"❌ Token Exchange Failed: {response.json()}", file=sys.stdout)
+            return jsonify({"error": "Token Exchange Failed", "details": response.json()}), 400
+
+    except Exception as e:
+        print(f"🚨 ERROR: {e}", file=sys.stdout)
+        return jsonify({"error": "Internal Server Error"}), 500
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Render assigns a dynamic port
