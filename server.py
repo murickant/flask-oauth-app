@@ -36,12 +36,12 @@ def callback():
         access_token = response.json().get("access_token")
         print(f"✅ Access Token Obtained: {access_token}")
 
-        # 🔹 Ensure token.txt is saved in the right place
+        # 🔹 Ensure token.txt is saved in the right location
+        save_path = os.path.join(os.getcwd(), "token.txt")
         try:
-            save_path = os.path.join(os.getcwd(), "token.txt")
             with open(save_path, "w") as f:
                 f.write(access_token)
-            print(f"✅ Token successfully saved to {save_path}")
+            print(f"✅ Token successfully saved to: {save_path}")
         except Exception as e:
             print(f"❌ Failed to save token.txt: {e}")
 
