@@ -1,8 +1,10 @@
 import json
 import psycopg2
-from flask import Flask, request
+from flask import Flask, request, jsonify
+from flask_cors import CORS  # ✅ Import CORS
 
 app = Flask(__name__)
+CORS(app)  # ✅ Enable CORS for frontend requests
 
 # ✅ Render PostgreSQL Connection Details
 DB_CONFIG = {
@@ -23,7 +25,7 @@ def connect_db():
         return None
 
 def setup_database():
-    """Ensures the `access_tokens` table exists."""
+    """Ensures required tables exist."""
     conn = connect_db()
     if not conn:
         return
@@ -37,9 +39,17 @@ def setup_database():
                 created_at TIMESTAMP DEFAULT NOW()
             );
         """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS patients (
+                id SERIAL PRIMARY KEY,
+                mrn TEXT UNIQUE NOT NULL,
+                data JSONB,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """)
         conn.commit()
         conn.close()
-        print("✅ PostgreSQL table 'access_tokens' is ready!")
+        print("✅ PostgreSQL tables 'access_tokens' and 'patients' are ready!")
     except Exception as e:
         print(f"❌ Database setup error: {e}")
 
@@ -115,6 +125,26 @@ def exchange_for_access_token(auth_code):
     else:
         print(f"❌ Error exchanging token: {response_json}")
         return None
+
+@app.route('/patients', methods=['GET'])
+def get_patients():
+    """Fetches stored patient data from PostgreSQL for frontend display."""
+    conn = connect_db()
+    if not conn:
+        return jsonify({"error": "❌ Database connection failed!"}), 500
+
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT mrn, data FROM patients;")
+        patients = [{"mrn": row[0], "data": row[1]} for row in cursor.fetchall()]
+        conn.close()
+        
+        if not patients:
+            return jsonify({"message": "No patient data found!"}), 200
+        
+        return jsonify(patients)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     setup_database()
