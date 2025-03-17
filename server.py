@@ -47,14 +47,16 @@ def save_token_to_db(access_token):
     """Saves the access token to PostgreSQL and prints debug messages."""
     conn = connect_db()
     if not conn:
+        print("❌ No database connection. Token not saved.")
         return
 
     try:
+        print(f"📝 Saving token to database: {access_token[:10]}... (truncated)")
         cursor = conn.cursor()
         cursor.execute("INSERT INTO access_tokens (token) VALUES (%s);", (access_token,))
         conn.commit()
         conn.close()
-        print(f"✅ Access Token Saved to Database: {access_token[:10]}... (truncated)")
+        print(f"✅ Access Token Successfully Saved: {access_token[:10]}... (truncated)")
     except Exception as e:
         print(f"❌ Failed to save token to database: {e}")
 
