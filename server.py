@@ -4,21 +4,31 @@ from flask import Flask, request
 
 app = Flask(__name__)
 
-# 🔹 PostgreSQL Connection Details
+# 🔹 PostgreSQL Connection Details (Using Render External Database URL)
 DB_CONFIG = {
     "dbname": "epic_mvp",
-    "user": "thomas.murickan",  # Replace with your actual PostgreSQL user
-    "password": "1234",  # Replace with your actual password
-    "host": "localhost",
+    "user": "epic_mvp_user",  
+    "password": "YQKJzPMVFUHCqYkdVeom8SI4aCEHatLh",
+    "host": "dpg-cvbo45tds78s73an1fvg-a.virginia-postgres.render.com",  # ✅ Use Render's external database URL
     "port": "5432"
 }
 
-def setup_database():
-    """Ensures the access_tokens table exists."""
+def connect_db():
+    """Connects to PostgreSQL database."""
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor()
+        return psycopg2.connect(**DB_CONFIG)
+    except Exception as e:
+        print(f"❌ Database connection error: {e}")
+        return None
 
+def setup_database():
+    """Ensures the `access_tokens` table exists in the database."""
+    conn = connect_db()
+    if not conn:
+        return
+    
+    try:
+        cursor = conn.cursor()
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS access_tokens (
                 id SERIAL PRIMARY KEY,
@@ -26,7 +36,6 @@ def setup_database():
                 created_at TIMESTAMP DEFAULT NOW()
             );
         """)
-
         conn.commit()
         conn.close()
         print("✅ PostgreSQL table 'access_tokens' is ready!")
@@ -35,14 +44,15 @@ def setup_database():
 
 def save_token_to_db(access_token):
     """Saves the access token to PostgreSQL."""
+    conn = connect_db()
+    if not conn:
+        return
+    
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
         cursor = conn.cursor()
-
         cursor.execute("INSERT INTO access_tokens (token) VALUES (%s);", (access_token,))
         conn.commit()
         conn.close()
-
         print("✅ Access Token Saved to Database!")
     except Exception as e:
         print(f"❌ Failed to save token to database: {e}")
