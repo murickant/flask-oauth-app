@@ -13,13 +13,12 @@ DB_CONFIG = {
     "port": "5432"
 }
 
-def save_token_to_db(access_token):
-    """Saves the access token to PostgreSQL instead of token.txt."""
+def setup_database():
+    """Ensures the access_tokens table exists."""
     try:
         conn = psycopg2.connect(**DB_CONFIG)
         cursor = conn.cursor()
 
-        # Create table if it doesn't exist
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS access_tokens (
                 id SERIAL PRIMARY KEY,
@@ -28,7 +27,18 @@ def save_token_to_db(access_token):
             );
         """)
 
-        # Insert token
+        conn.commit()
+        conn.close()
+        print("✅ PostgreSQL table 'access_tokens' is ready!")
+    except Exception as e:
+        print(f"❌ Database setup error: {e}")
+
+def save_token_to_db(access_token):
+    """Saves the access token to PostgreSQL."""
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+
         cursor.execute("INSERT INTO access_tokens (token) VALUES (%s);", (access_token,))
         conn.commit()
         conn.close()
@@ -57,7 +67,8 @@ def callback():
 
     print(f"🔑 Access Token Received: {access_token}")
 
-    # ✅ Save access token to PostgreSQL
+    # ✅ Ensure database is ready and save token
+    setup_database()
     save_token_to_db(access_token)
 
     return "✅ Access Token Obtained Successfully! You can close this window."
@@ -93,4 +104,5 @@ def exchange_for_access_token(auth_code):
         return None
 
 if __name__ == "__main__":
+    setup_database()  # ✅ Ensure table exists before starting
     app.run(host="0.0.0.0", port=5000, debug=True)
